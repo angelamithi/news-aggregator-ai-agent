@@ -8,12 +8,14 @@ import requests
 import json
 import streamlit as st
 
-load_dotenv()
+# Load secrets from Streamlit Secrets
+openai_api_key = st.secrets["OPENAI_API_KEY"]
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+# Initialize the OpenAI client with the API key
+openai.api_key = openai_api_key
 client = openai.OpenAI(api_key=openai.api_key)
-model="gpt-3.5-turbo-16k"
-news_api_key=os.environ.get('NEWS_API_KEY')
+model = "gpt-3.5-turbo-16k"
+news_api_key = st.secrets["NEWS_API_KEY"]
 
 
 def get_news(topic):
