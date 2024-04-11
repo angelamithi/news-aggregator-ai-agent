@@ -9,7 +9,9 @@ import json
 import streamlit as st
 
 load_dotenv()
-client=openai.OpenAI()
+
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=openai.api_key)
 model="gpt-3.5-turbo-16k"
 news_api_key=os.environ.get('NEWS_API_KEY')
 
