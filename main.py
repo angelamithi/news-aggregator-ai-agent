@@ -210,24 +210,24 @@ def main():
                     name="News Summarizer",
                     instructions="You are a personal article summarizer Assistant who knows how to take a list of article's titles and descriptions and then write a short summary of all the news articles",
                     tools=[
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "get_news",
-                            "description": "Get the list of articles/news for the given topic",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "topic": {
-                                        "type": "string",
-                                        "description": "The topic for the news, e.g. bitcoin",
-                                    }
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "summarize_news",
+                                "description": "Summarize the list of news articles",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "articles": {
+                                            "type": "array",
+                                            "description": "List of news articles",
+                                        }
+                                    },
+                                    "required": ["articles"],
                                 },
-                                "required": ["topic"],
                             },
-                        },
-                    }
-                ],
+                        }
+                    ],
                 )
                 st.session_state.assistant_id = manager.assistant.id
             
@@ -235,12 +235,15 @@ def main():
                 manager.create_thread()
                 st.session_state.thread_id = manager.thread.id
 
+            # Fetch news articles
+            articles = get_news(topic=instructions)
+
             # Add the message and run the assistant
             manager.add_message_to_thread(
                 role="user",
-                content=f"summarize the news on this topic {instructions}?"
+                content=f"summarize the news on this topic {instructions}?",
             )
-            manager.run_assistant(instructions="Summarize the news")
+            manager.run_assistant(instructions="Summarize the news", articles=articles)
             # Wait for completions and process messages
             manager.wait_for_completion()
             summary = manager.get_summary()
@@ -250,6 +253,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
