@@ -20,7 +20,8 @@ news_api_key = st.secrets["NEWS_API_KEY"]
 
 def get_news(topic):
     url=(
-        f"https://newsapi.org/v2/everything?q={topic}&from=2024-03-10&sortBy=publishedAt&apiKey={news_api_key}&pageSize=5"
+        f"https://newsdata.io/api/1/news?apikey={news_api_key}&q={topic}"
+      
     )
     try:
         response=requests.get(url)
@@ -32,22 +33,20 @@ def get_news(topic):
             # Access all the fields 
             status=data["status"]
             total_results=data["totalResults"]
-            articles=data["articles"]
+            articles=data["results"]
             final_news=[]
 
             # Loop through the article
             for article in articles:
-                source_name=article["source"]["name"]
-                author=article["author"]
+                #source_name=article["source"]["name"]
+                #author=article["author"]
                 title=article["title"]
                 description=article["description"]
-                url=article["url"]
+                url=article["link"]
                 content=article["content"]
 
                 title_description=f"""
                 Title:{title}
-                Author:{author}
-                Source:{source_name}
                 Description:{description}
                 URL:{url}
        
