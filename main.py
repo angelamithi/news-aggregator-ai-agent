@@ -41,23 +41,25 @@ def get_news(topic):
                 author = article["author"]
                 title = article["title"]
                 description = article["description"]
-                url = article["url"]  # URL extraction
+                url = article["url"]
+                content = article["content"]
 
-                # Construct the article information string
-                article_info = f"""
-                Title: {title}
-                Author: {author}
-                Source: {source_name}
-                Description: {description}
-                URL: {url}
+                title_description = f"""
+                Title:{title}
+                Author:{author}
+                Source:{source_name}
+                Description:{description}
+                URL:{url}
+       
                 """
-                final_news.append(article_info)
+                final_news.append(title_description)
             return final_news
         else:
             return []
-    except requests.exceptions.RequestException as e:
-        print("Error Occurred during API Requests", e)
 
+
+    except requests.exceptions.RequestException as e:
+        print("Error Occurred during Api Requests", e)
 
 class AssistantManager:
     thread_id = None
