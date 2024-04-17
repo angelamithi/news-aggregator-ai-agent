@@ -1,5 +1,5 @@
 import openai
-from dotenv import find_dotenv,load_dotenv
+from dotenv import find_dotenv, load_dotenv
 import logging
 import time
 from datetime import datetime
@@ -19,32 +19,32 @@ news_api_key = st.secrets["NEWS_API_KEY"]
 
 
 def get_news(topic):
-    url=(
+    url = (
         f"https://newsapi.org/v2/everything?q={topic}&from=2024-03-10&sortBy=publishedAt&apiKey={news_api_key}&pageSize=5"
     )
     try:
-        response=requests.get(url)
-        if response.status_code==200:
-            news=json.dumps(response.json(), indent=4)
-            news_json=json.loads(news)
+        response = requests.get(url)
+        if response.status_code == 200:
+            news = json.dumps(response.json(), indent=4)
+            news_json = json.loads(news)
 
-            data=news_json
-            # Access all the fields 
-            status=data["status"]
-            total_results=data["totalResults"]
-            articles=data["articles"]
-            final_news=[]
+            data = news_json
+            # Access all the fields
+            status = data["status"]
+            total_results = data["totalResults"]
+            articles = data["articles"]
+            final_news = []
 
             # Loop through the article
             for article in articles:
-                source_name=article["source"]["name"]
-                author=article["author"]
-                title=article["title"]
-                description=article["description"]
-                url=article["url"]
-                content=article["content"]
+                source_name = article["source"]["name"]
+                author = article["author"]
+                title = article["title"]
+                description = article["description"]
+                url = article["url"]
+                content = article["content"]
 
-                title_description=f"""
+                title_description = f"""
                 Title:{title}
                 Author:{author}
                 Source:{source_name}
@@ -56,27 +56,26 @@ def get_news(topic):
             return final_news
         else:
             return []
-        
 
 
     except requests.exceptions.RequestException as e:
-        print("Error Occurred during Api Requests",e)
+        print("Error Occurred during Api Requests", e)
 
 class AssistantManager:
-    thread_id=None
-    assistant_id=None
+    thread_id = None
+    assistant_id = None
 
-    def __init__(self,model:str=model):
-        self.client=openai.OpenAI()
-        self.model=model
-        self.assistant=None
-        self.thread=None
-        self.run=None
-        self.summary=None
+    def __init__(self, model: str = model):
+        self.client = openai.OpenAI()
+        self.model = model
+        self.assistant = None
+        self.thread = None
+        self.run = None
+        self.summary = None
 
         # Retrieve existing assistant and thread if IDs are already set
 
-         # Retrieve existing assistant and thread if IDs are stored in session state
+        # Retrieve existing assistant and thread if IDs are stored in session state
         if st.session_state.assistant_id:
             self.assistant = self.client.beta.assistants.retrieve(
                 assistant_id=st.session_state.assistant_id
@@ -86,16 +85,16 @@ class AssistantManager:
                 thread_id=st.session_state.thread_id
             )
 
-    def create_assistant(self,name,instructions,tools):
+    def create_assistant(self, name, instructions, tools):
         if not self.assistant:
-            assistant_obj=self.client.beta.assistants.create(
+            assistant_obj = self.client.beta.assistants.create(
                 name=name,
                 instructions=instructions,
                 tools=tools,
                 model=self.model
             )
-            AssistantManager.assistant_id=assistant_obj.id
-            self.assistant=assistant_obj# This is now our new assisant
+            AssistantManager.assistant_id = assistant_obj.id
+            self.assistant = assistant_obj  # This is now our new assistant
             print(f"AssisID:::: {self.assistant.id}")
 
     def create_thread(self):
@@ -105,65 +104,65 @@ class AssistantManager:
             st.session_state.thread_id = thread_obj.id  # Save the thread ID in session state
             print(f"ThreadID:::: {self.thread.id}")
 
-    def add_message_to_thread(self,role,content):
+    def add_message_to_thread(self, role, content):
         if self.thread:
             self.client.beta.threads.messages.create(
                 thread_id=self.thread.id,
                 role=role,
                 content=content
-        )
-    def run_assistant(self,instructions):
+            )
+
+    def run_assistant(self, instructions):
         if self.assistant and self.thread:
-            self.run=self.client.beta.threads.runs.create(
+            self.run = self.client.beta.threads.runs.create(
                 thread_id=self.thread.id,
                 assistant_id=self.assistant.id,
                 instructions=instructions
 
             )
+
     def process_message(self):
         if self.thread:
-            messages=self.client.beta.threads.messages.list(thread_id=self.thread.id)
-            summary=[]
-            last_message=messages.data[0]
-            role=last_message.role
-            response=last_message.content[0].text.value
+            messages = self.client.beta.threads.messages.list(thread_id=self.thread.id)
+            summary = []
+            last_message = messages.data[0]
+            role = last_message.role
+            response = last_message.content[0].text.value
             summary.append(response)
-            self.summary="\n".join(summary)
+            self.summary = "\n".join(summary)
             print(f"SUMMARY-----> {role.capitalize()}: ==> {response}")
-    
 
     def wait_for_completion(self):
         if self.thread and self.run:
             while True:
                 time.sleep(5)
-                run_status=self.client.beta.threads.runs.retrieve(
+                run_status = self.client.beta.threads.runs.retrieve(
                     thread_id=self.thread.id,
                     run_id=self.run.id
                 )
                 print(f"RUN STATUS::{run_status.model_dump_json(indent=4)}")
-                if run_status.status=="completed":
+                if run_status.status == "completed":
                     self.process_message()
                     break
-                elif run_status.status=="requires_action":
+                elif run_status.status == "requires_action":
                     print("FUNCTION CALLING NOW....")
                     self.call_required_functions(required_actions=run_status.required_action.submit_tool_outputs.model_dump())
-            
 
-    def call_required_functions(self,required_actions):
+    def call_required_functions(self, required_actions):
         if not self.run:
             return
-        tool_outputs=[]
+        tool_outputs = []
         for action in required_actions["tool_calls"]:
-            func_name=action["function"]["name"]
-            arguments=json.loads(action["function"]["arguments"])
-            if func_name=="get_news":
-                output=get_news(topic=arguments["topic"])
+            func_name = action["function"]["name"]
+            arguments = json.loads(action["function"]["arguments"])
+            if func_name == "get_news":
+                output = get_news(topic=arguments["topic"])
                 print(f"STUFFFFF;;;;{output}")
-                final_str=""
+                final_str = ""
                 for item in output:
-                    final_str +="".join(item)
-                tool_outputs.append({"tool_call_id":action["id"],
-                                    "output": final_str})
+                    final_str += "".join(item)
+                tool_outputs.append({"tool_call_id": action["id"],
+                                     "output": final_str})
             else:
                 raise ValueError(f"Unknown Function:{func_name}")
         print("Submitting outputs back to the Assistant...")
@@ -174,7 +173,7 @@ class AssistantManager:
 
 
         )
-    #streamlit
+    # streamlit
     def get_summary(self):
         return self.summary
 
@@ -182,7 +181,7 @@ class AssistantManager:
         if not self.thread:
             print("No thread available")
             return []
-    
+
         run_steps = self.client.beta.threads.runs.steps.list(
             thread_id=self.thread.id,
             run_id=self.run.id
@@ -191,7 +190,6 @@ class AssistantManager:
         return run_steps.data
 
 
-        
 def main():
     st.title("News Summarizer")
 
@@ -200,37 +198,37 @@ def main():
         st.session_state.thread_id = None
 
     with st.form(key="user_input_form"):
-        instructions = st.text_input("Enter topic:")
-        submit_button = st.form_submit_button(label="Run Assistant")
+        user_input = st.text_input("Ask a question or provide a topic:")
+        submit_button = st.form_submit_button(label="Submit")
 
-        if submit_button:
+        if submit_button and user_input:
             manager = AssistantManager()
             if not st.session_state.assistant_id:
                 manager.create_assistant(
                     name="News Summarizer",
                     instructions="You are a personal article summarizer Assistant who knows how to take a list of article's titles and descriptions and then write a short summary of all the news articles",
                     tools=[
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "get_news",
-                            "description": "Get the list of articles/news for the given topic",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "topic": {
-                                        "type": "string",
-                                        "description": "The topic for the news, e.g. bitcoin",
-                                    }
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "get_news",
+                                "description": "Get the list of articles/news for the given topic",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "topic": {
+                                            "type": "string",
+                                            "description": "The topic for the news, e.g. bitcoin",
+                                        }
+                                    },
+                                    "required": ["topic"],
                                 },
-                                "required": ["topic"],
                             },
-                        },
-                    }
-                ],
+                        }
+                    ],
                 )
                 st.session_state.assistant_id = manager.assistant.id
-            
+
             if not st.session_state.thread_id:
                 manager.create_thread()
                 st.session_state.thread_id = manager.thread.id
@@ -238,9 +236,9 @@ def main():
             # Add the message and run the assistant
             manager.add_message_to_thread(
                 role="user",
-                content=f"summarize the news on this topic {instructions}?"
+                content=user_input
             )
-            manager.run_assistant(instructions="Summarize the news")
+            manager.run_assistant(instructions="Understand user intent")
             # Wait for completions and process messages
             manager.wait_for_completion()
             summary = manager.get_summary()
@@ -248,8 +246,6 @@ def main():
             st.text("Run Steps:")
             st.code(manager.run_steps(), line_numbers=True)
 
+
 if __name__ == "__main__":
     main()
-
-
-
