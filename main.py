@@ -53,6 +53,7 @@ def get_news(topic):
        
                 """
                 final_news.append(title_description)
+                print(final_news)
             return final_news
         else:
             return []
